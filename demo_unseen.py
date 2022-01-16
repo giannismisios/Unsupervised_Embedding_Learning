@@ -61,7 +61,7 @@ parser.add_argument('--test-batch', default=100, type=int,
 parser.add_argument('--gpu', default='0', type=str,
                       help='gpu device ids for CUDA_VISIBLE_DEVICES')
 
-src_dir = '/home/datasets/prml/computervision/classification/'                     
+src_dir = './datasets/'
 
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
