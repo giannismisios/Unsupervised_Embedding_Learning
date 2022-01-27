@@ -17,21 +17,29 @@ def kNN(epoch, net, trainloader, testloader, K, sigma, ndata, low_dim = 128):
 
    
     if hasattr(trainloader.dataset, 'imgs'):
-        trainLabels = torch.LongTensor([y for (p, y) in trainloader.dataset.imgs]).cuda()
+        #trainLabels = torch.LongTensor([y for (p, y) in trainloader.dataset.imgs]).cuda()
+        trainLabels = torch.LongTensor([y for (p, y) in trainloader.dataset.imgs]) #g added
+
     else:
         try:
-            trainLabels = torch.LongTensor(trainloader.dataset.train_labels).cuda()
+            #trainLabels = torch.LongTensor(trainloader.dataset.train_labels).cuda()
+            trainLabels = torch.LongTensor(trainloader.dataset.train_labels) #g added
+
         except:
-            trainLabels = torch.LongTensor(trainloader.dataset.labels).cuda()
+            #trainLabels = torch.LongTensor(trainloader.dataset.labels).cuda()
+            trainLabels = torch.LongTensor(trainloader.dataset.labels)  #g added
+
     trainFeatures = np.zeros((low_dim, ndata))    
     C = trainLabels.max() + 1
     C = np.int(C)
     with torch.no_grad():
         transform_bak = trainloader.dataset.transform
         trainloader.dataset.transform = testloader.dataset.transform
-        temploader = torch.utils.data.DataLoader(trainloader.dataset, batch_size=100, shuffle=False, num_workers=4)
+        temploader = torch.utils.data.DataLoader(trainloader.dataset, batch_size=100, shuffle=False, num_workers=0)
         for batch_idx, (inputs, _, targets, indexes) in enumerate(temploader):
             targets = targets.cuda(non_blocking =True)
+            targets = targets #g: added
+
             batchSize = inputs.size(0)
             features = net(inputs)
             # 
@@ -40,15 +48,21 @@ def kNN(epoch, net, trainloader, testloader, K, sigma, ndata, low_dim = 128):
     trainloader.dataset.transform = transform_bak
     # 
     
-    trainFeatures = torch.Tensor(trainFeatures).cuda()    
+    #trainFeatures = torch.Tensor(trainFeatures).cuda()
+    trainFeatures = torch.Tensor(trainFeatures) #g: added
+
     top1 = 0.
     top5 = 0.
     end = time.time()
     with torch.no_grad():
-        retrieval_one_hot = torch.zeros(K, C).cuda()
+        #retrieval_one_hot = torch.zeros(K, C).cuda()
+        retrieval_one_hot = torch.zeros(K, C) #g: added
+
         for batch_idx, (inputs, targets, indexes) in enumerate(testloader):
             end = time.time()
-            targets = targets.cuda(non_blocking=True)
+            #targets = targets.cuda(non_blocking=True)
+            targets = targets #g: added
+
             batchSize = inputs.size(0)  
             features = net(inputs)
             total += targets.size(0)
@@ -143,9 +157,9 @@ def eval_nmi(embedding, label,  normed_flag = False, fast_kmeans = False):
         for i in range(embedding.shape[0]):
             embedding[i,:] = embedding[i,:]/np.sqrt(np.sum(embedding[i,:] ** 2)+1e-4)
     if fast_kmeans:
-        kmeans = KMeans(n_clusters=num_category, n_init = 1, n_jobs=8)
+        kmeans = KMeans(n_clusters=num_category, n_init = 1, n_jobs=1) #g: n_jobs=8
     else:
-        kmeans = KMeans(n_clusters=num_category,n_jobs=8)
+        kmeans = KMeans(n_clusters=num_category,n_jobs=1)
     kmeans.fit(embedding)
     y_kmeans_pred = kmeans.predict(embedding)
     nmi = normalized_mutual_info_score(label, y_kmeans_pred)
