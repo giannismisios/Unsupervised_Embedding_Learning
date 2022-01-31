@@ -23,7 +23,7 @@ from BatchAverage import BatchCriterion
 from utils import *
 
 from tensorboardX import SummaryWriter
-import multiprocessing #Giannis
+import multiprocessing #g
 #from torchsummary import summary #Giannis
 
 
