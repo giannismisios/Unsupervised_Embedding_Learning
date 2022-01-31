@@ -25,7 +25,7 @@ from utils import *
 from tensorboardX import SummaryWriter
 import multiprocessing  # Giannis
 
-# from torchsummary import summary #Giannis
+from torchsummary import summary #Giannis
 
 
 model_names = sorted(name for name in models.__dict__
@@ -42,32 +42,19 @@ parser = argparse.ArgumentParser(description='PyTorch CUB200 Training')
 parser.add_argument('--dataset', default='cub200', help='dataset name')
 parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', default='', type=str, help='resume from checkpoint')
-parser.add_argument('--log_dir', default='log/', type=str,
-                    help='log save path')
-parser.add_argument('--model_dir', default='checkpoint/', type=str,
-                    help='model save path')
+parser.add_argument('--log_dir', default='log/', type=str, help='log save path')
+parser.add_argument('--model_dir', default='checkpoint/', type=str, help='model save path')
 parser.add_argument('--test-only', action='store_true', help='test only')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='inception_v1_ml',
-                    choices=model_names,
-                    help='model architecture: ' +
-                         ' | '.join(model_names) +
-                         ' (default: inception_v1_ml)')
-parser.add_argument('--low-dim', default=128, type=int,
-                    metavar='D', help='feature dimension')
-parser.add_argument('--batch-t', default=0.1, type=float,
-                    metavar='T', help='temperature parameter for softmax')
-parser.add_argument('--scratch', dest='scratch', action='store_true',
-                    help='training from the sratch')
-parser.add_argument('--batch-size', default=64, type=int,
-                    metavar='B', help='training batch size')
-parser.add_argument('--batch-m', default=1, type=int,
-                    metavar='N', help='m for negative sum')
-parser.add_argument('--ptr', default=0, type=int,
-                    metavar='P', help='instance or class knn')
-parser.add_argument('--test-batch', default=100, type=int,
-                    help='training batch size')
-parser.add_argument('--gpu', default='0', type=str,
-                    help='gpu device ids for CUDA_VISIBLE_DEVICES')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='inception_v1_ml', choices=model_names,
+                    help='model architecture: ' + ' | '.join(model_names) + ' (default: inception_v1_ml)')
+parser.add_argument('--low-dim', default=128, type=int, metavar='D', help='feature dimension')
+parser.add_argument('--batch-t', default=0.1, type=float, metavar='T', help='temperature parameter for softmax')
+parser.add_argument('--scratch', dest='scratch', action='store_true', help='training from the sratch')
+parser.add_argument('--batch-size', default=64, type=int, metavar='B', help='training batch size')
+parser.add_argument('--batch-m', default=1, type=int, metavar='N', help='m for negative sum')
+parser.add_argument('--ptr', default=0, type=int, metavar='P', help='instance or class knn')
+parser.add_argument('--test-batch', default=100, type=int, help='testing batch size')
+parser.add_argument('--gpu', default='0', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
 
 
 def main():
@@ -174,7 +161,7 @@ def main():
         net = models.__dict__[args.arch](low_dim=args.low_dim)
 
     if args.arch == 'resnet18':
-        pool_dim = args.low_dim  # g: before 512
+        pool_dim = args.low_dim # g: before 512
     elif args.arch == 'inception_v1_ml':
         pool_dim = 1024
     elif args.arch == 'resnet50':
@@ -184,6 +171,7 @@ def main():
         #print(net)  # g added
         print(torch.cuda.device_count())  # g added
         net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+        print(summary(net, input_size=(3, 224, 224)))  # g For inception 227
     cudnn.benchmark = True
 
     # define loss function: inner product loss within each mini-batch
@@ -196,16 +184,22 @@ def main():
         # Load checkpoint.
         model_path = args.model_dir + args.resume
         print('==> Resuming from checkpoint..')
-        assert os.path.isdir(args.model_dir), 'Error: no checkpoint directory found!'
+        assert os.path.isdir(src_dir + args.model_dir), 'Error: no checkpoint directory found!'
         checkpoint = torch.load(model_path)
         net.load_state_dict(checkpoint['net'])
         best_acc = checkpoint['recall']
+        best_nmi = checkpoint['nmi'] #g added
         start_epoch = checkpoint['epoch']
+
+    # Testing Only
+    if args.test_only:
+        evaluation(net, testloader, writer)
+        sys.exit(0)
 
     # define optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
-    for epoch in range(start_epoch, start_epoch + 60):
+    for epoch in range(start_epoch, start_epoch + 6): #g: start_epoch + 60
 
         # generate positive index
         if args.dataset == 'cub200':
@@ -242,7 +236,7 @@ def main():
             print('Evaluating.....')
             end = time.time()
 
-            # select nn Index
+            # select nn Index (nn=Nearest Neighbor)
             dist_feat = np.matmul(train_features, train_features.T)
             nn_index = compute_knn(dist_feat, trainLabels, knn=1, epoch=epoch)
         else:
@@ -252,7 +246,7 @@ def main():
 
         ################# training#######################
         train(epoch, optimizer, net, trainloader, criterion, freeze_bn, writer)
-        #################################################
+
         # testing performance
         print('Extracting Test Features.....')
         net.eval()
@@ -277,6 +271,8 @@ def main():
 
         # compute recall at 1
         recal = eval_recall(test_features, testLabels)
+        # compute recall_k
+        recall_k = eval_recall_K(test_features, testLabels, K_list) #g added
         if args.dataset == 'ebay' and epoch % 10 == 0:
             nmi = eval_nmi(test_features, testLabels, fast_kmeans=True)
         else:
@@ -295,6 +291,7 @@ def main():
             state = {
                 'net': net.state_dict(),
                 'recall': recal,
+                'recall_k': recall_k, #g added
                 'nmi': nmi,
                 'epoch': epoch,
             }
@@ -309,6 +306,7 @@ def main():
 
         print('[Epoch]: {}'.format(epoch), file=test_log_file)
         print('recall1: {:.2%} \t NMI: {:.2%}'.format(recal, nmi), file=test_log_file)
+
         if args.dataset == 'ebay':
             print('(Best Recall @1  NMI:{})'.format(
                 best_acc, best_nmi), file=test_log_file)
@@ -393,6 +391,48 @@ def compute_knn(dist_feat, trainLabels, knn=5, epoch=8):
         # random 1nn and augmented sample for positive
         nnIndex[i] = np.random.choice([ind[0], i])
     return nnIndex.astype(np.int32)
+
+def evaluation(net,testloader, writer):
+    # testing performance
+    print('Extracting Test Features.....')
+    net.eval()
+    ptr =0
+    end = time.time()
+    test_size = testloader.dataset.__len__()
+    test_features = np.zeros((test_size,args.low_dim))
+    with torch.no_grad():
+        for batch_idx, (inputs, targets, indexes) in enumerate(testloader):
+            batchSize = inputs.size(0)
+            real_size = min(batchSize, args.test_batch)
+            targets = np.asarray(targets)
+            batch_feat = net(inputs.cuda())  # g: before batch_feat, _ = net(inputs)
+            test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
+            ptr += real_size
+    testLabels = np.asarray(testloader.dataset.img_label)
+    print("Extracting Time: '{}'s".format(time.time()-end))
+
+    print('Evaluating.....')
+    end = time.time()
+
+    # compute recall at 1
+    recal = eval_recall(test_features,testLabels)
+    # compute recall at k # g
+    recall_k = eval_recall_K(test_features, testLabels)
+    # plot k nearest images
+    plot_closer_K(test_features,testLabels, testloader)
+    if args.dataset =='ebay':    #g: before and epoch%10==0:
+        nmi = eval_nmi(test_features, testLabels, fast_kmeans =True)
+    else:
+        nmi = eval_nmi(test_features, testLabels)
+
+    print("Extracting Time: '{}'s".format(time.time()-end))
+
+    writer.add_scalar('recall@1', recal) #g: before ('recall@1', recal, epoch)
+    writer.add_scalar('nmi', nmi) #g: before ('nmi', nmi, epoch)
+    #print('[Epoch]: {}'.format(epoch)) #g
+    print('recall: {:.2%}'.format(recal))
+    print('NMI: {:.2%}'.format(nmi))
+
 
 if __name__ == '__main__':
     main()
