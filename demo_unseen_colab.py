@@ -26,7 +26,7 @@ from tensorboardX import SummaryWriter
 import multiprocessing  # Giannis
 
 from torchsummary import summary #Giannis
-
+import dill as pickle #g
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -102,7 +102,8 @@ def main():
     print('==> Preparing data..')
 
     # Data loading code
-    if args.arch == 'inception_v1_ml':
+    if args.arch == 'inception_v1_ml': #g: before inception_v1_ml !!!!!!!!!!!!!
+
         normalize = transforms.Compose([
             transforms.ToTensor(),
             transforms.Lambda(lambda x: x * 255.0),
@@ -207,7 +208,6 @@ def main():
             net.eval()
             net_time = AverageMeter()
             val_time = AverageMeter()
-
             ptr = 0
             end = time.time()
             transform_bak = trainset.transform
@@ -222,8 +222,12 @@ def main():
                     batchSize = inputs.size(0)
                     real_size = min(batchSize, args.test_batch)
                     targets = np.asarray(targets)
-                    batch_feat = net(inputs.cuda()) #g: before _, batch_feat = net(inputs)
-                    train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) #g: added .cpu()
+                    if args.arch == 'inception_v1_ml': #g: added
+                        _, batch_feat = net(inputs.cuda()) #g: for inception
+                        train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) #g: for inception
+                    else:
+                        batch_feat = net(inputs.cuda())  # g: before _, batch_feat = net(inputs)
+                        train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
                     ptr += args.test_batch
             net_time.update(time.time() - end)
             trainLabels = np.asarray(temploader.dataset.img_label)
@@ -244,7 +248,7 @@ def main():
 
         trainloader.dataset.nnIndex = nn_index
 
-        ################# training#######################
+        # training
         train(epoch, optimizer, net, trainloader, criterion, freeze_bn, writer)
 
         # testing performance
@@ -259,9 +263,12 @@ def main():
                 batchSize = inputs.size(0)
                 real_size = min(batchSize, args.test_batch)
                 targets = np.asarray(targets)
-
-                batch_feat = net(inputs.cuda()) #g: before batch_feat, _ = net(inputs)
-                test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) #g: added .cpu()
+                if args.arch == 'inception_v1_ml': #g: added
+                    batch_feat, _ = net(inputs.cuda()) #g: for inception
+                    test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) #g: for inception
+                else:
+                    batch_feat = net(inputs.cuda())  # g: before batch_feat, _ = net(inputs)
+                    test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
                 ptr += real_size
         testLabels = np.asarray(testloader.dataset.img_label)
         print("Extracting Time: '{}'s".format(time.time() - end))
@@ -324,7 +331,7 @@ def adjust_learning_rate(optimizer, epoch, writer):
         lr = args.lr * 0.1
     else:
         lr = args.lr * 0.01
-
+    #lr = args.lr #g: added paper says lr without decay
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     writer.add_scalar('lr', lr, epoch)
@@ -405,8 +412,12 @@ def evaluation(net,testloader, writer):
             batchSize = inputs.size(0)
             real_size = min(batchSize, args.test_batch)
             targets = np.asarray(targets)
-            batch_feat = net(inputs.cuda())  # g: before batch_feat, _ = net(inputs)
-            test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
+            if args.arch == 'inception_v1_ml': #g: added
+                batch_feat, _ = net(inputs.cuda())  # g: g: only for inception
+                test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: only for inception
+            else:
+                batch_feat = net(inputs.cuda())  # g: before batch_feat, _ = net(inputs)
+                test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
             ptr += real_size
     testLabels = np.asarray(testloader.dataset.img_label)
     print("Extracting Time: '{}'s".format(time.time()-end))
@@ -428,9 +439,15 @@ def evaluation(net,testloader, writer):
     print("Extracting Time: '{}'s".format(time.time()-end))
 
     writer.add_scalar('recall@1', recal) #g: before ('recall@1', recal, epoch)
+    #writer.add_scalar('recall@k',recall_k) #g: added
     writer.add_scalar('nmi', nmi) #g: before ('nmi', nmi, epoch)
     #print('[Epoch]: {}'.format(epoch)) #g
     print('recall: {:.2%}'.format(recal))
+    print('recall_1: {:.2%}\t'
+          'recall_2: {:.2%}\t'
+          'recall_3: {:.2%}\t'
+          'recall_4: {:.2%}'
+        .format(recall_k[0],recall_k[1],recall_k[2],recall_k[3]))
     print('NMI: {:.2%}'.format(nmi))
 
 
