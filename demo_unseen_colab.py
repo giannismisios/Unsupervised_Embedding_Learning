@@ -102,7 +102,7 @@ def main():
     print('==> Preparing data..')
 
     # Data loading code
-    if args.arch == 'inception_v1_ml': #g: before inception_v1_ml !!!!!!!!!!!!!
+    if args.arch == 'inception_v1': #g: before inception_v1_ml !!!!!!!!!!!!!
 
         normalize = transforms.Compose([
             transforms.ToTensor(),
