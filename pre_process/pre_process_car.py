@@ -4,7 +4,7 @@ import os
 from PIL import Image, ImageChops
 from tqdm import tqdm
 
-#download from 
+#download from (from edge/mozilla browser)
 image_url = "http://imagenet.stanford.edu/internal/car196/car_ims.tgz"
 annotation_url = "http://imagenet.stanford.edu/internal/car196/cars_annos.mat"
 
@@ -17,7 +17,7 @@ def trim(im):
     if bbox:
         return im.crop(bbox)
 
-data_dir = '/home/datasets/prml/computervision/classification/car196/'
+data_dir = 'C:/Users/Giannis/Desktop/Data Science/Thesis/Implementation/Reproduction/Unsupervised Embedding Learning via Invariant and Spreading Instance Feature/datasets/car196/'
 
 training_img_list = []
 validation_img_list = []
@@ -34,7 +34,7 @@ for label in tqdm(annotation):
     image_name = image_name[0]
     class_id = class_id[0][0]
     #print(image_name,class_id)
-    img = Image.open(data_dir+image_name)
+    img = Image.open(data_dir + image_name)
     #img = trim(img)
     img = img.resize((fix_image_width, fix_image_height), Image.ANTIALIAS)
     pix_array = np.array(img)
