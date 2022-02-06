@@ -189,7 +189,7 @@ def plot_closer_K(embedding, label, testloader, K_list =[4]):
     label_array = testloader.dataset.img_label
     norm = np.sum(embedding*embedding,axis = 1)
 
-    for i in range(0,embedding.shape[0],30):
+    for i in range(0,embedding.shape[0],1020):
         dis = norm[i] + norm - 2*np.squeeze(np.matmul(embedding[i],embedding.T))
         dis[i] = 1e10
         index = np.argsort(dis)
@@ -233,4 +233,4 @@ def set_bn_to_eval(m):
     # 2. scale and shift parameters are still trainable
     classname = m.__class__.__name__
     if classname.find('BatchNorm') != -1:
-        m.eval()      
+        m.eval()
