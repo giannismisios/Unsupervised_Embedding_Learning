@@ -200,7 +200,7 @@ def main():
     # define optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
-    for epoch in range(start_epoch, start_epoch + 6): #g: start_epoch + 60
+    for epoch in range(start_epoch, start_epoch + 60):
 
         # generate positive index
         if args.dataset == 'cub200':
@@ -263,11 +263,11 @@ def main():
                 real_size = min(batchSize, args.test_batch)
                 targets = np.asarray(targets)
                 if args.arch == 'inception_v1_ml': #g: added
-                    batch_feat, _ = net(inputs.cuda()) #g: for inception
-                    test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) #g: for inception
+                    batch_feat, _ = net(inputs.cuda())
+                    test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())
                 else:
-                    batch_feat = net(inputs.cuda())  # g: before batch_feat, _ = net(inputs)
-                    test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
+                    batch_feat = net(inputs.cuda())
+                    test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())
                 ptr += real_size
         testLabels = np.asarray(testloader.dataset.img_label)
         print("Extracting Time: '{}'s".format(time.time() - end))
@@ -434,17 +434,17 @@ def evaluation(net,testloader, writer):
     recall_k = eval_recall_K(test_features, testLabels, K_list)
     # plot k nearest images
     plot_closer_K(test_features,testLabels, testloader)
-    if args.dataset =='ebay':    #g: before and epoch%10==0:
+    if args.dataset =='ebay':
         nmi = eval_nmi(test_features, testLabels, fast_kmeans =True)
     else:
         nmi = eval_nmi(test_features, testLabels)
 
     print("Extracting Time: '{}'s".format(time.time()-end))
 
-    writer.add_scalar('recall@1', recal) #g: before ('recall@1', recal, epoch)
-    #writer.add_scalar('recall@k',recall_k) #g: added
-    writer.add_scalar('nmi', nmi) #g: before ('nmi', nmi, epoch)
-    #print('[Epoch]: {}'.format(epoch)) #g
+    writer.add_scalar('recall@1', recal)
+
+    writer.add_scalar('nmi', nmi)
+
     print('recall: {:.2%}'.format(recal))
     if args.dataset == 'ebay':
         print('recall_1: {:.2%}\t'
