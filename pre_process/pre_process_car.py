@@ -4,7 +4,7 @@ import os
 from PIL import Image, ImageChops
 from tqdm import tqdm
 
-#download from (from edge/mozilla browser)
+#download from (from edge/mozilla browser )
 image_url = "http://imagenet.stanford.edu/internal/car196/car_ims.tgz"
 annotation_url = "http://imagenet.stanford.edu/internal/car196/cars_annos.mat"
 
