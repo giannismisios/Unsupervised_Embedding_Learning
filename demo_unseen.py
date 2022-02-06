@@ -23,11 +23,19 @@ from BatchAverage import BatchCriterion
 from utils import *
 
 from tensorboardX import SummaryWriter
+import multiprocessing #g
+#from torchsummary import summary #Giannis
 
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
+
+'''print(torch.__version__)
+print(torch.cuda.current_device())
+print(torch.cuda.is_available())
+print(torch.cuda.device_count())
+print(torch.cuda.get_device_name(0))'''
 
 
 parser = argparse.ArgumentParser(description='PyTorch CUB200 Training')
@@ -61,7 +69,8 @@ parser.add_argument('--test-batch', default=100, type=int,
 parser.add_argument('--gpu', default='0', type=str,
                       help='gpu device ids for CUDA_VISIBLE_DEVICES')
 
-src_dir = './datasets/'
+#src_dir = './datasets/'
+src_dir = 'C:/Users/georg/PycharmProjects/Unsupervised_Embedding_Learning/'
 
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -143,11 +152,11 @@ else:
     ])
 
 
-trainset = datasets.MLDataInstance(src_dir = src_dir, dataset_name = args.dataset, train=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last =True)
+trainset = datasets.MLDataInstance(src_dir = src_dir+'datasets/', dataset_name = args.dataset, train=True, transform=transform_train)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=multiprocessing.cpu_count(), drop_last =True) #g num_workers=4
 
-testset = datasets.MLDataInstance(src_dir = src_dir, dataset_name = args.dataset, train=False, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=4)
+testset = datasets.MLDataInstance(src_dir = src_dir+'datasets/', dataset_name = args.dataset, train=False, transform=transform_test)
+testloader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count()) #g num_workers=4
 
 ndata = trainset.__len__()
 
@@ -161,13 +170,15 @@ else:
     net = models.__dict__[args.arch](low_dim=args.low_dim)
 
 if args.arch =='resnet18':
-    pool_dim = 512
+    pool_dim = args.low_dim #g: before 512
 elif args.arch=='inception_v1_ml':
     pool_dim = 1024
 elif args.arch=='resnet50':
     pool_dim = 2048
 
 if device == 'cuda':
+    print(net) #g added
+    print(torch.cuda.device_count()) #g added
     net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 cudnn.benchmark = True
 
@@ -281,7 +292,7 @@ for epoch in range(start_epoch, start_epoch+60):
         transform_bak = trainset.transform
         trainset.transform = testloader.dataset.transform
         trainset.nnIndex = None 
-        temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=4)
+        temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count()) #g num_workers=4
         train_features = np.zeros((ndata,pool_dim))
         trainLabels   = np.zeros(ndata)
         with torch.no_grad():
