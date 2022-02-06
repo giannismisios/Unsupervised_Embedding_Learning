@@ -26,7 +26,7 @@ from tensorboardX import SummaryWriter
 import multiprocessing  # Giannis
 
 from torchsummary import summary #Giannis
-import dill as pickle #g
+#import dill as pickle #g
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -59,7 +59,6 @@ parser.add_argument('--gpu', default='0', type=str, help='gpu device ids for CUD
 
 def main():
     global args, src_dir, device
-    # src_dir = './datasets/'
     src_dir = 'C:/Users/georg/PycharmProjects/Unsupervised_Embedding_Learning/'
     args = parser.parse_args()
 
@@ -149,6 +148,8 @@ def main():
                                       transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch, shuffle=False,
                                              num_workers=multiprocessing.cpu_count())  # g num_workers=4
+    traintestloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False,
+                                             num_workers=multiprocessing.cpu_count())
 
     ndata = trainset.__len__()
 
@@ -169,10 +170,10 @@ def main():
         pool_dim = 2048
 
     if device == 'cuda':
-        #print(net)  # g added
+        print(net)  # g added
         print(torch.cuda.device_count())  # g added
         net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
-        print(summary(net, input_size=(3, 224, 224)))  # g For inception 227
+        #print(summary(net, input_size=(3, 227, 227)))  # g For inception 227
     cudnn.benchmark = True
 
     # define loss function: inner product loss within each mini-batch
@@ -213,8 +214,7 @@ def main():
             transform_bak = trainset.transform
             trainset.transform = testloader.dataset.transform
             trainset.nnIndex = None
-            temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False,
-                                                     num_workers=multiprocessing.cpu_count())  # g num_workers=4
+            temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count())  # g before shuffle=False
             train_features = np.zeros((ndata, pool_dim))
             trainLabels = np.zeros(ndata)
             with torch.no_grad():
@@ -223,8 +223,8 @@ def main():
                     real_size = min(batchSize, args.test_batch)
                     targets = np.asarray(targets)
                     if args.arch == 'inception_v1_ml': #g: added
-                        _, batch_feat = net(inputs.cuda()) #g: for inception
-                        train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) #g: for inception
+                        _, batch_feat = net(inputs.cuda())
+                        train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())
                     else:
                         batch_feat = net(inputs.cuda())  # g: before _, batch_feat = net(inputs)
                         train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
@@ -427,8 +427,12 @@ def evaluation(net,testloader, writer):
 
     # compute recall at 1
     recal = eval_recall(test_features,testLabels)
+    if args.dataset == 'ebay':
+      K_list = [1, 10, 100]
+    else:
+      K_list = [1, 2, 4, 8]
     # compute recall at k # g
-    recall_k = eval_recall_K(test_features, testLabels)
+    recall_k = eval_recall_K(test_features, testLabels, K_list)
     # plot k nearest images
     plot_closer_K(test_features,testLabels, testloader)
     if args.dataset =='ebay':    #g: before and epoch%10==0:
@@ -443,11 +447,18 @@ def evaluation(net,testloader, writer):
     writer.add_scalar('nmi', nmi) #g: before ('nmi', nmi, epoch)
     #print('[Epoch]: {}'.format(epoch)) #g
     print('recall: {:.2%}'.format(recal))
-    print('recall_1: {:.2%}\t'
-          'recall_2: {:.2%}\t'
-          'recall_3: {:.2%}\t'
-          'recall_4: {:.2%}'
-        .format(recall_k[0],recall_k[1],recall_k[2],recall_k[3]))
+    if args.dataset == 'ebay':
+        print('recall_1: {:.2%}\t'
+              'recall_10: {:.2%}\t'
+              'recall_100: {:.2%}\t'
+              .format(recall_k[0], recall_k[1], recall_k[2]))
+    else:
+        print('recall_1: {:.2%}\t'
+              'recall_2: {:.2%}\t'
+              'recall_4: {:.2%}\t'
+              'recall_8: {:.2%}'
+              .format(recall_k[0], recall_k[1], recall_k[2], recall_k[3]))
+        print('NMI: {:.2%}'.format(nmi))
     print('NMI: {:.2%}'.format(nmi))
 
 
