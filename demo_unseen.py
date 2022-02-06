@@ -213,7 +213,7 @@ def main():
             transform_bak = trainset.transform
             trainset.transform = testloader.dataset.transform
             trainset.nnIndex = None
-            temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count())  # g before shuffle=False
+            temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count())  
             train_features = np.zeros((ndata, pool_dim))
             trainLabels = np.zeros(ndata)
             with torch.no_grad():
