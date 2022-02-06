@@ -23,10 +23,9 @@ from BatchAverage import BatchCriterion
 from utils import *
 
 from tensorboardX import SummaryWriter
-import multiprocessing  # Giannis
+import multiprocessing  # g
 
-from torchsummary import summary #Giannis
-#import dill as pickle #g
+from torchsummary import summary #g
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -101,7 +100,7 @@ def main():
     print('==> Preparing data..')
 
     # Data loading code
-    if args.arch == 'inception_v1_ml': #g: before inception_v1_ml !!!!!!!!!!!!!
+    if args.arch == 'inception_v1_ml':
 
         normalize = transforms.Compose([
             transforms.ToTensor(),
@@ -142,12 +141,12 @@ def main():
     trainset = datasets.MLDataInstance(src_dir=src_dir + 'datasets/', dataset_name=args.dataset, train=True,
                                        transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True,
-                                              num_workers=multiprocessing.cpu_count(), drop_last=True)  # g num_workers=4
+                                              num_workers=multiprocessing.cpu_count(), drop_last=True)
 
     testset = datasets.MLDataInstance(src_dir=src_dir + 'datasets/', dataset_name=args.dataset, train=False,
                                       transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch, shuffle=False,
-                                             num_workers=multiprocessing.cpu_count())  # g num_workers=4
+                                             num_workers=multiprocessing.cpu_count())
     traintestloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False,
                                              num_workers=multiprocessing.cpu_count())
 
