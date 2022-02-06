@@ -3,10 +3,14 @@ import scipy.io as sio
 import os
 from PIL import Image, ImageChops
 from tqdm import tqdm
+import zipfile
+
 
 
 #download from 
 image_url = "ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip"
+'''with zipfile.ZipFile(data_dir + 'Stanford_Online_Products.zip', 'r') as zip_ref:
+    zip_ref.extractall(data_dir)'''
 
 #cut white margin
 def trim(im):
@@ -37,8 +41,7 @@ def pad(im):
                       (fix_image_height-im.size[1])/2))
     return new_im
 
-data_dir = '/home/datasets/prml/computervision/classification/ebay/'
-
+data_dir = 'C:/Users/Giannis/Desktop/Data Science/Thesis/Implementation/Stanford_Online_Products/'
 training_img_list = []
 validation_img_list = []
 
@@ -47,7 +50,7 @@ validation_label_list = []
 fix_image_width = 256
 fix_image_height = 256
 index = 0
-with open(data_dir+'Ebay_train.txt', 'r') as label_file:
+with open(data_dir+'Ebay_train_first_4_classes.txt', 'r') as label_file:
    for info in tqdm(label_file):
        if index == 0:
            index = index + 1
@@ -77,7 +80,7 @@ training_img = None
 training_label = None
 
 index = 0
-with open(data_dir+'Ebay_test.txt', 'r') as label_file:
+with open(data_dir+'Ebay_test_first_4_classes.txt', 'r') as label_file:
     for info in tqdm(label_file):
         if index == 0:
             index = index + 1
