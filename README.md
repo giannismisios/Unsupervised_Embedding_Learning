@@ -23,7 +23,7 @@ The learned embedding performs well on both seen and unseen testing categories.
 Our code extends the pytorch implementation of NCE paper in [Github](https://github.com/zhirongw/lemniscate.pytorch). 
 Please refer to the official repo for details of data preparation and hardware configurations.
 
-- ~~Prerequisites: Python2.7, [pytorch=0.4](http://pytorch.org), Numpy, TensorboardX, Scikit_learn
+- ~~Prerequisites: Python2.7, [pytorch=0.4](http://pytorch.org), Numpy, TensorboardX, Scikit_learn~~
 - Prerequisites: Python3.7.12, [pytorch=1.10.0](http://pytorch.org), Torchvision=0.11.1, Numpy, TensorboardX, Scikit_learn
 
 - Clone this repo: `git clone https://github.com/giannismisios/Unsupervised_Embedding_Learning`
