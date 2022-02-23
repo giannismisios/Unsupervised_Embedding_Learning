@@ -147,8 +147,6 @@ def main():
                                       transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch, shuffle=False,
                                              num_workers=multiprocessing.cpu_count())
-    traintestloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False,
-                                             num_workers=multiprocessing.cpu_count())
 
     ndata = trainset.__len__()
 
@@ -172,7 +170,7 @@ def main():
         print(net)  # g added
         print(torch.cuda.device_count())  # g added
         net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
-        #print(summary(net, input_size=(3, 227, 227)))  # g For inception 227
+        #print(summary(net, input_size=(3, 224, 224)))  # g For inception 227
     cudnn.benchmark = True
 
     # define loss function: inner product loss within each mini-batch
@@ -213,7 +211,7 @@ def main():
             transform_bak = trainset.transform
             trainset.transform = testloader.dataset.transform
             trainset.nnIndex = None
-            temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count())  # g before shuffle=False
+            temploader = torch.utils.data.DataLoader(trainset, batch_size=args.test_batch, shuffle=False, num_workers=multiprocessing.cpu_count())
             train_features = np.zeros((ndata, pool_dim))
             trainLabels = np.zeros(ndata)
             with torch.no_grad():
@@ -223,7 +221,7 @@ def main():
                     targets = np.asarray(targets)
                     if args.arch == 'inception_v1_ml': #g: added
                         _, batch_feat = net(inputs.cuda())
-                        train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())
+                        train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu()) # g: added .cpu()
                     else:
                         batch_feat = net(inputs.cuda())  # g: before _, batch_feat = net(inputs)
                         train_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: added .cpu()
@@ -412,7 +410,7 @@ def evaluation(net,testloader, writer):
             real_size = min(batchSize, args.test_batch)
             targets = np.asarray(targets)
             if args.arch == 'inception_v1_ml': #g: added
-                batch_feat, _ = net(inputs.cuda())  # g: g: only for inception
+                batch_feat, _ = net(inputs.cuda())  # g: only for inception
                 test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: only for inception
             else:
                 batch_feat = net(inputs.cuda())  # g: before batch_feat, _ = net(inputs)
@@ -430,7 +428,7 @@ def evaluation(net,testloader, writer):
       K_list = [1, 10, 100]
     else:
       K_list = [1, 2, 4, 8]
-    # compute recall at k # g
+    # compute recall at k # g added
     recall_k = eval_recall_K(test_features, testLabels, K_list)
     # plot k nearest images
     plot_closer_K(test_features,testLabels, testloader)
