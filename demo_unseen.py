@@ -411,7 +411,7 @@ def evaluation(net,testloader, writer):
             batchSize = inputs.size(0)
             real_size = min(batchSize, args.test_batch)
             targets = np.asarray(targets)
-            if args.arch == 'inception_v1_ml': #g: added
+            if args.arch == 'inception_v1_ml': # g: added
                 batch_feat, _ = net(inputs.cuda())  # g: g: only for inception
                 test_features[ptr:ptr + real_size, :] = np.asarray(batch_feat.cpu())  # g: only for inception
             else:
