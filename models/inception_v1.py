@@ -2,7 +2,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import os
-import hickle
+import pickle
 from models.normalize import Normalize
 import torch.nn.functional as F
 import torchvision
@@ -101,7 +101,7 @@ class Model(nn.Module):
     def __init__(self, base_model, low_dim=128):
         super(Model, self).__init__()
         self.base_model = base_model
-        self.embedder = nn.Linear(1024, low_dim)  # g before base_model.output_size   (=1024)
+        self.embedder = nn.Linear(base_model.output_size, low_dim)  # g  base_model.output_size   (=1024)
         self.l2norm = Normalize(2)
 
         # base_model = inception_v1_googlenet()
@@ -117,13 +117,11 @@ class Model(nn.Module):
 
 
 def inception_v1_ml(pretrained=False, low_dim=128):
-    '''base_model = inception_v1_googlenet()
-    base_model_weights_path = 'models/googlenet.h5'
+    base_model = inception_v1_googlenet()
+    base_model_weights_path = 'models/googlenet.pkl'
+    pkl_file = open(base_model_weights_path, 'rb')
+    pretrained_dict = pickle.load(pkl_file, encoding='iso-8859-1')
     if os.path.exists(base_model_weights_path):
-        #print(os.path.dirname(os.path.abspath(__file__))) #g added
-        base_model.load_state_dict({k : torch.from_numpy(v).cuda() for k, v in hickle.load(base_model_weights_path).items()})
-    net = Model(base_model, low_dim)'''
-    base_model = torchvision.models.googlenet(pretrained=True)  # g: added
-    base_model = nn.Sequential(*list(base_model.children())[:-2])  # g: added
-    net = Model(base_model, low_dim)  # g: added
+        base_model.load_state_dict({k: torch.from_numpy(v).cuda() for k, v in pretrained_dict.items()})
+    net = Model(base_model, low_dim)
     return net
